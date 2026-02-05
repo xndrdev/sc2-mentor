@@ -36,8 +36,8 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 ENV GO_ENV=production
-ENV PORT=8080
+ENV PORT=3000
 
-EXPOSE 8080
+EXPOSE 3000
 
-CMD ["./server", "-port", "8080", "-db", "/app/data/sc2analytics.db", "-uploads", "/app/data/uploads"]
+CMD ["./server", "-port", "3000", "-db", "/app/data/sc2analytics.db", "-uploads", "/app/data/uploads"]
