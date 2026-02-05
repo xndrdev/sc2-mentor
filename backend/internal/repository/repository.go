@@ -656,6 +656,29 @@ func (r *Repository) LinkReplayToUser(userID, replayID int64) error {
 	return err
 }
 
+// UserOwnsReplay prüft ob ein Replay einem Benutzer gehört
+func (r *Repository) UserOwnsReplay(userID, replayID int64) (bool, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM user_replays WHERE user_id = ? AND replay_id = ?`,
+		userID, replayID,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CountUserReplays gibt die Anzahl der Replays eines Benutzers zurück
+func (r *Repository) CountUserReplays(userID int64) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM user_replays WHERE user_id = ?`,
+		userID,
+	).Scan(&count)
+	return count, err
+}
+
 // GetUserReplays gibt alle Replays eines Benutzers zurück
 func (r *Repository) GetUserReplays(userID int64, limit, offset int) ([]models.Replay, error) {
 	rows, err := r.db.Query(

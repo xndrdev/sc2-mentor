@@ -9,16 +9,19 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
+      meta: { requiresAuth: true },
     },
     {
       path: '/replay/:id',
       name: 'replay',
       component: () => import('@/views/ReplayView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/trends',
       name: 'trends',
       component: () => import('@/views/TrendsView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',

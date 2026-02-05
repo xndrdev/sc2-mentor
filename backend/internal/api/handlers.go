@@ -189,11 +189,29 @@ func (h *Handler) UploadReplay(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteReplay behandelt DELETE /api/v1/replays/:id
+// Löscht nur Replays, die dem authentifizierten Benutzer gehören
 func (h *Handler) DeleteReplay(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		respondError(w, http.StatusUnauthorized, "Nicht authentifiziert")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Replay-ID")
+		return
+	}
+
+	// Prüfe ob das Replay dem Benutzer gehört
+	owns, err := h.repo.UserOwnsReplay(user.ID, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	if !owns {
+		respondError(w, http.StatusForbidden, "Kein Zugriff auf dieses Replay")
 		return
 	}
 
@@ -309,7 +327,14 @@ func (h *Handler) ClaimReplay(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListReplays behandelt GET /api/v1/replays
+// Gibt nur Replays des authentifizierten Benutzers zurück
 func (h *Handler) ListReplays(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		respondError(w, http.StatusUnauthorized, "Nicht authentifiziert")
+		return
+	}
+
 	// Paginierung
 	limit := 20
 	offset := 0
@@ -326,13 +351,14 @@ func (h *Handler) ListReplays(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	replays, err := h.repo.ListReplays(limit, offset)
+	// Nur Replays des Benutzers laden
+	replays, err := h.repo.GetUserReplays(user.ID, limit, offset)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Konnte Replays nicht laden")
 		return
 	}
 
-	total, err := h.repo.CountReplays()
+	total, err := h.repo.CountUserReplays(user.ID)
 	if err != nil {
 		total = len(replays)
 	}
@@ -346,11 +372,29 @@ func (h *Handler) ListReplays(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetReplay behandelt GET /api/v1/replays/:id
+// Gibt nur Replays zurück, die dem authentifizierten Benutzer gehören
 func (h *Handler) GetReplay(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		respondError(w, http.StatusUnauthorized, "Nicht authentifiziert")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Replay-ID")
+		return
+	}
+
+	// Prüfe ob das Replay dem Benutzer gehört
+	owns, err := h.repo.UserOwnsReplay(user.ID, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	if !owns {
+		respondError(w, http.StatusForbidden, "Kein Zugriff auf dieses Replay")
 		return
 	}
 
@@ -368,11 +412,29 @@ func (h *Handler) GetReplay(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetReplayAnalysis behandelt GET /api/v1/replays/:id/analysis
+// Gibt nur Analysen für Replays zurück, die dem authentifizierten Benutzer gehören
 func (h *Handler) GetReplayAnalysis(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		respondError(w, http.StatusUnauthorized, "Nicht authentifiziert")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Replay-ID")
+		return
+	}
+
+	// Prüfe ob das Replay dem Benutzer gehört
+	owns, err := h.repo.UserOwnsReplay(user.ID, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	if !owns {
+		respondError(w, http.StatusForbidden, "Kein Zugriff auf dieses Replay")
 		return
 	}
 
@@ -503,11 +565,29 @@ func calculateSingleTrend(metrics []map[string]interface{}, key string) models.T
 }
 
 // GetStrategicAnalysis behandelt GET /api/v1/replays/:id/strategic
+// Gibt nur strategische Analysen für Replays zurück, die dem authentifizierten Benutzer gehören
 func (h *Handler) GetStrategicAnalysis(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		respondError(w, http.StatusUnauthorized, "Nicht authentifiziert")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Replay-ID")
+		return
+	}
+
+	// Prüfe ob das Replay dem Benutzer gehört
+	owns, err := h.repo.UserOwnsReplay(user.ID, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	if !owns {
+		respondError(w, http.StatusForbidden, "Kein Zugriff auf dieses Replay")
 		return
 	}
 

@@ -50,17 +50,20 @@ func NewRouter(handler *Handler, repo *repository.Repository) *chi.Mux {
 			})
 		})
 
-		// Replays (optional authentifiziert für User-Zuordnung)
+		// Replays (authentifiziert - nur eigene Replays sichtbar)
 		r.Route("/replays", func(r chi.Router) {
-			r.Use(OptionalAuthMiddleware(repo))
-			r.Post("/upload", handler.UploadReplay)
-			r.Get("/", handler.ListReplays)
-			r.Get("/{id}", handler.GetReplay)
-			r.Get("/{id}/analysis", handler.GetReplayAnalysis)
-			r.Get("/{id}/strategic", handler.GetStrategicAnalysis)
-			// Delete und Claim benötigen Authentifizierung
+			// Upload erlaubt optional authentifiziert (für User-Zuordnung)
+			r.Group(func(r chi.Router) {
+				r.Use(OptionalAuthMiddleware(repo))
+				r.Post("/upload", handler.UploadReplay)
+			})
+			// Alle anderen Replay-Operationen erfordern Authentifizierung
 			r.Group(func(r chi.Router) {
 				r.Use(AuthMiddleware(repo))
+				r.Get("/", handler.ListReplays)
+				r.Get("/{id}", handler.GetReplay)
+				r.Get("/{id}/analysis", handler.GetReplayAnalysis)
+				r.Get("/{id}/strategic", handler.GetStrategicAnalysis)
 				r.Delete("/{id}", handler.DeleteReplay)
 				r.Post("/{id}/claim", handler.ClaimReplay)
 			})
