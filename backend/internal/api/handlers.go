@@ -294,8 +294,8 @@ func (h *Handler) ClaimReplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verknüpfe Replay mit Benutzer
-	if err := h.repo.LinkReplayToUser(user.ID, replayID); err != nil {
+	// Verknüpfe Replay mit Benutzer (inkl. player_id)
+	if err := h.repo.LinkReplayToUser(user.ID, replayID, req.PlayerID); err != nil {
 		respondError(w, http.StatusInternalServerError, "Fehler beim Verknüpfen")
 		return
 	}

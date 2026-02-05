@@ -199,7 +199,14 @@ func (r *Repository) migrate() error {
 	`
 
 	_, err := r.db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Migration: player_id zu user_replays hinzufügen
+	r.db.Exec(`ALTER TABLE user_replays ADD COLUMN player_id INTEGER`)
+
+	return nil
 }
 
 // CreatePlayer erstellt oder findet einen Spieler
@@ -647,11 +654,11 @@ func (r *Repository) UpdateUserLastLogin(userID int64) error {
 	return err
 }
 
-// LinkReplayToUser verknüpft ein Replay mit einem Benutzer
-func (r *Repository) LinkReplayToUser(userID, replayID int64) error {
+// LinkReplayToUser verknüpft ein Replay mit einem Benutzer und speichert die player_id
+func (r *Repository) LinkReplayToUser(userID, replayID, playerID int64) error {
 	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO user_replays (user_id, replay_id) VALUES (?, ?)`,
-		userID, replayID,
+		`INSERT OR IGNORE INTO user_replays (user_id, replay_id, player_id) VALUES (?, ?, ?)`,
+		userID, replayID, playerID,
 	)
 	return err
 }
@@ -1163,10 +1170,9 @@ func (r *Repository) getMainRaceForPeriod(userID int64, start, end time.Time) st
 		`SELECT gp.race
 		 FROM game_players gp
 		 JOIN replays r ON r.id = gp.replay_id
-		 JOIN user_replays ur ON ur.replay_id = r.id
-		 JOIN players p ON p.id = gp.player_id
-		 JOIN users u ON u.sc2_player_name = p.name
-		 WHERE ur.user_id = ? AND r.played_at >= ? AND r.played_at <= ?
+		 JOIN user_replays ur ON ur.replay_id = r.id AND ur.player_id = gp.player_id
+		 WHERE ur.user_id = ? AND ur.player_id IS NOT NULL
+		   AND r.played_at >= ? AND r.played_at <= ?
 		 GROUP BY gp.race
 		 ORDER BY COUNT(*) DESC
 		 LIMIT 1`,
@@ -1311,13 +1317,11 @@ func (r *Repository) GetWeekStats(userID int64) (*models.WeekStats, error) {
 // GetRecentGames holt die letzten Spiele eines Benutzers
 func (r *Repository) GetRecentGames(userID int64, limit int) ([]models.RecentGame, error) {
 	rows, err := r.db.Query(
-		`SELECT r.id, r.map, gp.result, gp.race, gp.apm, gp.spending_quotient, r.duration, r.played_at
+		`SELECT r.id, r.map, gp.result, gp.race, gp.apm, gp.spending_quotient, r.duration, r.played_at, ur.player_id
 		 FROM replays r
 		 JOIN user_replays ur ON ur.replay_id = r.id
-		 JOIN game_players gp ON gp.replay_id = r.id
-		 JOIN players p ON p.id = gp.player_id
-		 JOIN users u ON u.sc2_player_name = p.name AND u.id = ur.user_id
-		 WHERE ur.user_id = ?
+		 JOIN game_players gp ON gp.replay_id = r.id AND gp.player_id = ur.player_id
+		 WHERE ur.user_id = ? AND ur.player_id IS NOT NULL
 		 ORDER BY r.played_at DESC
 		 LIMIT ?`,
 		userID, limit,
@@ -1330,18 +1334,18 @@ func (r *Repository) GetRecentGames(userID int64, limit int) ([]models.RecentGam
 	var games []models.RecentGame
 	for rows.Next() {
 		var g models.RecentGame
-		err := rows.Scan(&g.ReplayID, &g.Map, &g.Result, &g.Race, &g.APM, &g.SQ, &g.Duration, &g.PlayedAt)
+		var playerID int64
+		err := rows.Scan(&g.ReplayID, &g.Map, &g.Result, &g.Race, &g.APM, &g.SQ, &g.Duration, &g.PlayedAt, &playerID)
 		if err != nil {
 			return nil, err
 		}
 
-		// Hole Gegner-Rasse
+		// Hole Gegner-Rasse über player_id
 		r.db.QueryRow(
 			`SELECT gp.race FROM game_players gp
-			 JOIN players p ON p.id = gp.player_id
-			 WHERE gp.replay_id = ? AND p.name != (SELECT sc2_player_name FROM users WHERE id = ?)
+			 WHERE gp.replay_id = ? AND gp.player_id != ?
 			 LIMIT 1`,
-			g.ReplayID, userID,
+			g.ReplayID, playerID,
 		).Scan(&g.EnemyRace)
 
 		games = append(games, g)
