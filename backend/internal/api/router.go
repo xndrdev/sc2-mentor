@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,9 +20,11 @@ func NewRouter(handler *Handler, repo *repository.Repository) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 
-	// CORS für Frontend
+	// CORS Konfiguration aus Environment oder Defaults
+	allowedOrigins := getAllowedOrigins()
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000", "http://127.0.0.1:5173"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -54,10 +58,10 @@ func NewRouter(handler *Handler, repo *repository.Repository) *chi.Mux {
 			r.Get("/{id}", handler.GetReplay)
 			r.Get("/{id}/analysis", handler.GetReplayAnalysis)
 			r.Get("/{id}/strategic", handler.GetStrategicAnalysis)
-			r.Delete("/{id}", handler.DeleteReplay)
-			// Claim benötigt Authentifizierung
+			// Delete und Claim benötigen Authentifizierung
 			r.Group(func(r chi.Router) {
 				r.Use(AuthMiddleware(repo))
+				r.Delete("/{id}", handler.DeleteReplay)
 				r.Post("/{id}/claim", handler.ClaimReplay)
 			})
 		})
@@ -87,4 +91,27 @@ func NewRouter(handler *Handler, repo *repository.Repository) *chi.Mux {
 	})
 
 	return r
+}
+
+// getAllowedOrigins gibt die erlaubten CORS Origins zurück
+func getAllowedOrigins() []string {
+	// Aus Environment Variable lesen (kommasepariert)
+	originsEnv := os.Getenv("CORS_ORIGINS")
+	if originsEnv != "" {
+		origins := strings.Split(originsEnv, ",")
+		// Trim whitespace
+		for i, origin := range origins {
+			origins[i] = strings.TrimSpace(origin)
+		}
+		return origins
+	}
+
+	// Defaults für Development
+	return []string{
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://localhost:5175",
+		"http://localhost:3000",
+		"http://127.0.0.1:5173",
+	}
 }

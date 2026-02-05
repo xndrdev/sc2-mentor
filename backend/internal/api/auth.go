@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,11 +18,80 @@ import (
 	"sc2-analytics/internal/repository"
 )
 
+// Rate Limiter für Auth Endpoints
+type rateLimiter struct {
+	requests map[string][]time.Time
+	mu       sync.Mutex
+	limit    int
+	window   time.Duration
+}
+
+var authRateLimiter = &rateLimiter{
+	requests: make(map[string][]time.Time),
+	limit:    5,              // 5 Versuche
+	window:   time.Minute,    // pro Minute
+}
+
+func (rl *rateLimiter) isAllowed(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	windowStart := now.Add(-rl.window)
+
+	// Entferne alte Einträge
+	var recent []time.Time
+	for _, t := range rl.requests[ip] {
+		if t.After(windowStart) {
+			recent = append(recent, t)
+		}
+	}
+	rl.requests[ip] = recent
+
+	// Prüfe Limit
+	if len(recent) >= rl.limit {
+		return false
+	}
+
+	// Füge neuen Request hinzu
+	rl.requests[ip] = append(rl.requests[ip], now)
+	return true
+}
+
+func getClientIP(r *http.Request) string {
+	// X-Forwarded-For für Reverse Proxy
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[0])
+	}
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return xri
+	}
+	// Fallback auf RemoteAddr
+	return strings.Split(r.RemoteAddr, ":")[0]
+}
+
 // JWT Konfiguration
-const (
-	jwtSecret     = "sc2-analytics-secret-key-change-in-production"
-	tokenDuration = 7 * 24 * time.Hour // 7 Tage
-)
+var jwtSecret string
+
+const tokenDuration = 7 * 24 * time.Hour // 7 Tage
+
+func init() {
+	jwtSecret = os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		// In Production muss JWT_SECRET gesetzt sein
+		if os.Getenv("GO_ENV") == "production" {
+			panic("JWT_SECRET environment variable is required in production")
+		}
+		// Für Development: generiere ein zufälliges Secret
+		bytes := make([]byte, 32)
+		if _, err := rand.Read(bytes); err != nil {
+			panic("Failed to generate random JWT secret: " + err.Error())
+		}
+		jwtSecret = base64.StdEncoding.EncodeToString(bytes)
+		fmt.Println("WARNING: Using random JWT secret. Set JWT_SECRET env var for persistent sessions.")
+	}
+}
 
 // contextKey ist der Typ für Context-Keys
 type contextKey string
@@ -45,6 +118,13 @@ func NewAuthHandler(repo *repository.Repository) *AuthHandler {
 
 // Register registriert einen neuen Benutzer
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	// Rate Limiting
+	clientIP := getClientIP(r)
+	if !authRateLimiter.isAllowed(clientIP) {
+		respondError(w, http.StatusTooManyRequests, "Zu viele Anfragen. Bitte warte eine Minute.")
+		return
+	}
+
 	var req models.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Anfrage: "+err.Error())
@@ -57,8 +137,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Password) < 6 {
-		respondError(w, http.StatusBadRequest, "Passwort muss mindestens 6 Zeichen haben")
+	if len(req.Password) < 8 {
+		respondError(w, http.StatusBadRequest, "Passwort muss mindestens 8 Zeichen haben")
 		return
 	}
 
@@ -102,6 +182,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // Login authentifiziert einen Benutzer
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	// Rate Limiting
+	clientIP := getClientIP(r)
+	if !authRateLimiter.isAllowed(clientIP) {
+		respondError(w, http.StatusTooManyRequests, "Zu viele Anfragen. Bitte warte eine Minute.")
+		return
+	}
+
 	var req models.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ungültige Anfrage: "+err.Error())
