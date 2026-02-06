@@ -137,8 +137,8 @@ Der Server akzeptiert folgende Flags:
 Tracking wird nur aktiviert, wenn beide Vite-Variablen gesetzt sind:
 
 ```bash
-VITE_UMAMI_SCRIPT_URL=https://umami.8mylez.host/script.js
-VITE_UMAMI_WEBSITE_ID=8e432679-d3db-4a13-92a5-ad50cb790f8f
+VITE_UMAMI_SCRIPT_URL=https://umami.myhost/script.js
+VITE_UMAMI_WEBSITE_ID=11111111-1111-1111-1111-111111111111
 ```
 
 Lokal: Variablen in `frontend/.env` setzen (siehe `frontend/.env.example`).

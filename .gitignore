@@ -56,3 +56,4 @@ coverage/
 # Replay files (zu gross fuer Git)
 *.SC2Replay
 backend/bin/
+backend/server
