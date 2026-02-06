@@ -132,6 +132,20 @@ Der Server akzeptiert folgende Flags:
 -uploads string    Upload-Verzeichnis (default "./data/uploads")
 ```
 
+### Optional: Umami Tracking (Frontend)
+
+Tracking wird nur aktiviert, wenn beide Vite-Variablen gesetzt sind:
+
+```bash
+VITE_UMAMI_SCRIPT_URL=https://umami.8mylez.host/script.js
+VITE_UMAMI_WEBSITE_ID=8e432679-d3db-4a13-92a5-ad50cb790f8f
+```
+
+Lokal: Variablen in `frontend/.env` setzen (siehe `frontend/.env.example`).
+Docker Compose: Variablen in der root-`.env` setzen (werden als Build-Args durchgereicht).
+
+Hinweis: `VITE_...` Variablen sind Build-Time-Konfiguration. Nach Änderungen ist ein neuer Frontend-Build nötig (`npm run build` bzw. `docker compose build`).
+
 ## Lizenz
 
 MIT

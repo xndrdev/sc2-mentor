@@ -2,7 +2,11 @@ version: '3.8'
 
 services:
   sc2-analytics:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_UMAMI_SCRIPT_URL: ${VITE_UMAMI_SCRIPT_URL:-}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
     ports:
       - "8080:8080"
     environment:
