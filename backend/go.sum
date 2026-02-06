@@ -7,8 +7,8 @@ github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVI
 github.com/icza/mpq v0.0.0-20170726141842-266342679beb/go.mod h1:iWOw+dZSITjPKFPiCNT7QE+xENOlT/YrBtMYkImipFo=
 github.com/icza/mpq v0.0.0-20230330132843-d3cdc0b651b7 h1:uWfnpztXMlK2068Uuv23eGsFsQpORS0UxYosbhPCMsI=
 github.com/icza/mpq v0.0.0-20230330132843-d3cdc0b651b7/go.mod h1:uZjJdSdZs2x2Gq+6/NdJE7nJ1upyftiNnw1ZMCFH+tc=
-github.com/icza/s2prot v1.5.2 h1:lc24kcR0FcUlHPB8l7qmJ4zeEJDKYgTacr/oCD66h+w=
-github.com/icza/s2prot v1.5.2/go.mod h1:Aw3BgGOZ83Qkxmz90i22WFCMiDU4oOFT5D3hoDLBl3E=
+github.com/icza/s2prot v1.5.2-0.20260205210405-d1a9821a734c h1:BbMpmmkJNZ99RkinrTFn+y1oW9vHV4WZKnVB7qLbzV0=
+github.com/icza/s2prot v1.5.2-0.20260205210405-d1a9821a734c/go.mod h1:Aw3BgGOZ83Qkxmz90i22WFCMiDU4oOFT5D3hoDLBl3E=
 github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o4kU=
 github.com/mattn/go-sqlite3 v1.14.22/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 golang.org/x/crypto v0.23.0 h1:dIJU/v2J8Mdglj/8rJ6UUOM3Zc9zLZxVZwwxMooUSAI=
