@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -170,9 +171,13 @@ func (h *Handler) UploadReplay(w http.ResponseWriter, r *http.Request) {
 
 	// Führe Analyse durch
 	analyses, err := h.analyzer.AnalyzeAndStore(parsedReplay, replay.ID, gamePlayers)
-	if err == nil {
+	if err != nil {
+		log.Printf("Analyse-Fehler für Replay %d: %v", replay.ID, err)
+	} else {
 		for _, analysis := range analyses {
-			h.repo.SaveAnalysis(analysis)
+			if err := h.repo.SaveAnalysis(analysis); err != nil {
+				log.Printf("Konnte Analyse nicht speichern für Replay %d, Player %d: %v", replay.ID, analysis.PlayerID, err)
+			}
 		}
 	}
 
@@ -610,20 +615,24 @@ func (h *Handler) GetStrategicAnalysis(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse JSON-Daten und finde Winner/Loser
+	var winnerAnalysisData, loserAnalysisData models.AnalysisData
 	var winnerAnalysis, loserAnalysis *models.AnalysisData
 	var winnerPlayer, loserPlayer *models.GamePlayer
 
-	for _, gp := range replay.GamePlayers {
-		var data models.AnalysisData
+	for i := range replay.GamePlayers {
+		gp := &replay.GamePlayers[i]
 		for _, a := range analyses {
 			if a.PlayerID == gp.PlayerID {
+				var data models.AnalysisData
 				if err := json.Unmarshal(a.Data, &data); err == nil {
 					if gp.Result == "Win" {
-						winnerAnalysis = &data
-						winnerPlayer = &gp
+						winnerAnalysisData = data
+						winnerAnalysis = &winnerAnalysisData
+						winnerPlayer = gp
 					} else if gp.Result == "Loss" {
-						loserAnalysis = &data
-						loserPlayer = &gp
+						loserAnalysisData = data
+						loserAnalysis = &loserAnalysisData
+						loserPlayer = gp
 					}
 				}
 				break

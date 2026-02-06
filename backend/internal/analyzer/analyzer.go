@@ -95,10 +95,7 @@ func (a *Analyzer) AnalyzeAndStore(parsedReplay *parser.ParsedReplay, replayID i
 	results := make(map[int64]*models.Analysis)
 
 	for _, player := range players {
-		if !player.IsHuman {
-			continue
-		}
-
+		// Analysiere alle Spieler (auch KI) für strategische Analyse
 		analysisData, err := a.AnalyzePlayer(parsedReplay, player.PlayerSlot, player.Race)
 		if err != nil {
 			continue // Überspringe fehlerhafte Analysen
